@@ -55,7 +55,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: trained-model
-          path: MLProject/mlruns/${{ steps.get_run_id.outputs.experiment_id }}/${{ steps.get_run_id.outputs.run_id }}/artifacts/random_forest_tuned_model
+          path: MLProject/mlruns/${{ steps.get_run_id.outputs.experiment_id }}/${{ steps.get_run_id.outputs.run_id }}/artifacts/rf_classifier_model
 
       - name: Upload Metrics & Charts
         uses: actions/upload-artifact@v4
@@ -70,9 +70,9 @@ jobs:
       - name: Build Docker Image from MLflow Model
         working-directory: MLProject
         run: |
-          MODEL_URI="mlruns/${{ steps.get_run_id.outputs.experiment_id }}/${{ steps.get_run_id.outputs.run_id }}/artifacts/random_forest_tuned_model"
+          MODEL_URI="mlruns/${{ steps.get_run_id.outputs.experiment_id }}/${{ steps.get_run_id.outputs.run_id }}/artifacts/rf_classifier_model"
           echo "Building Docker image from: $MODEL_URI"
-          mlflow models build-docker -m "$MODEL_URI" -n "sleep-disorder-model"
+          mlflow models build-docker -m "$MODEL_URI" -n "heart-clean-model"
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -82,10 +82,10 @@ jobs:
 
       - name: Tag Docker Image
         run: |
-          docker tag sleep-disorder-model:latest ${{ secrets.DOCKERHUB_USERNAME }}/sleep-disorder-model:latest
-          docker tag sleep-disorder-model:latest ${{ secrets.DOCKERHUB_USERNAME }}/sleep-disorder-model:${{ github.sha }}
+          docker tag heart-clean-model:latest ${{ secrets.DOCKERHUB_USERNAME }}/heart-clean-model:latest
+          docker tag heart-clean-model:latest ${{ secrets.DOCKERHUB_USERNAME }}/heart-clean-model:${{ github.sha }}
 
       - name: Push Docker Image
         run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/sleep-disorder-model:latest
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/sleep-disorder-model:${{ github.sha }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/heart-clean-model:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/heart-clean-model:${{ github.sha }}

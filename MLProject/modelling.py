@@ -23,24 +23,8 @@ from sklearn.metrics import (
 from scipy.stats import randint
 from sklearn.utils import estimator_html_repr
 
-load_dotenv()
-
-os.environ['MLFLOW_TRACKING_URI'] = os.getenv('MLFLOW_TRACKING_URI')
-os.environ['MLFLOW_TRACKING_USERNAME'] = os.getenv('MLFLOW_TRACKING_USERNAME')
-os.environ['MLFLOW_TRACKING_PASSWORD'] = os.getenv('MLFLOW_TRACKING_PASSWORD')
-
-dagshub.init(
-    repo_owner="najlaputrikaliandra",
-    repo_name="Membangun_model",
-    mlflow=True
-)
-print("MLflow & DagsHub terkoneksi")
-
-# ===== LOCAL MODE =====
-# mlflow.set_tracking_uri("http://127.0.0.1:5000")
-# mlflow.set_experiment("Klasifikasi heart clean")
-# print("MLflow LOCAL aktif")
-
+# MLflow Local Tracking
+mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "mlruns"))
 
 def load_and_split_data(data_path, target_col="target", test_size=0.2):
     print(f"Memuat dataset: {data_path}")
