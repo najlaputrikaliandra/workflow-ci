@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import mlflow
 import mlflow.sklearn
-import dagshub
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 
