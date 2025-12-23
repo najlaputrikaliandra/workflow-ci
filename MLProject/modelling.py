@@ -6,7 +6,6 @@ import pandas as pd
 import mlflow
 import mlflow.sklearn
 import matplotlib.pyplot as plt
-from dotenv import load_dotenv
 
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
