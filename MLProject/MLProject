@@ -1,0 +1,5 @@
+name: Heart_Clean
+
+entry_points:
+  main:
+    command: "python modelling.py"

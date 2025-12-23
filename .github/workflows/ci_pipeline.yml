@@ -1,0 +1,91 @@
+name: MLflow CI - Train and Deploy Model
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  MLFLOW_TRACKING_URI: mlruns
+
+jobs:
+  train-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Run actions/checkout@v3
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.12.7
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12.7'
+
+      - name: Check Env
+        run: |
+          python --version
+          pip --version
+          echo "Working directory: $(pwd)"
+          ls -la
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install mlflow==2.19.0 pandas numpy scikit-learn matplotlib seaborn
+
+      - name: Run mlflow project
+        working-directory: MLProject
+        run: |
+          mlflow run . --env-manager local
+
+      - name: Get latest MLflow run_id
+        id: get_run_id
+        working-directory: MLProject
+        run: |
+          EXPERIMENT_ID=$(ls mlruns/ | grep -v "models" | head -1)
+          RUN_ID=$(ls -t mlruns/$EXPERIMENT_ID/ | grep -v "meta.yaml" | head -1)
+          echo "experiment_id=$EXPERIMENT_ID" >> $GITHUB_OUTPUT
+          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+          echo "Experiment ID: $EXPERIMENT_ID"
+          echo "Latest run_id: $RUN_ID"
+
+      - name: Upload Model Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-model
+          path: MLProject/mlruns/${{ steps.get_run_id.outputs.experiment_id }}/${{ steps.get_run_id.outputs.run_id }}/artifacts/random_forest_tuned_model
+
+      - name: Upload Metrics & Charts
+        uses: actions/upload-artifact@v4
+        with:
+          name: metrics-and-charts
+          path: |
+            MLProject/mlruns/${{ steps.get_run_id.outputs.experiment_id }}/${{ steps.get_run_id.outputs.run_id }}/artifacts/*.png
+            MLProject/mlruns/${{ steps.get_run_id.outputs.experiment_id }}/${{ steps.get_run_id.outputs.run_id }}/artifacts/*.csv
+            MLProject/mlruns/${{ steps.get_run_id.outputs.experiment_id }}/${{ steps.get_run_id.outputs.run_id }}/artifacts/*.json
+            MLProject/mlruns/${{ steps.get_run_id.outputs.experiment_id }}/${{ steps.get_run_id.outputs.run_id }}/artifacts/*.txt
+
+      - name: Build Docker Image from MLflow Model
+        working-directory: MLProject
+        run: |
+          MODEL_URI="mlruns/${{ steps.get_run_id.outputs.experiment_id }}/${{ steps.get_run_id.outputs.run_id }}/artifacts/random_forest_tuned_model"
+          echo "Building Docker image from: $MODEL_URI"
+          mlflow models build-docker -m "$MODEL_URI" -n "sleep-disorder-model"
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Tag Docker Image
+        run: |
+          docker tag sleep-disorder-model:latest ${{ secrets.DOCKERHUB_USERNAME }}/sleep-disorder-model:latest
+          docker tag sleep-disorder-model:latest ${{ secrets.DOCKERHUB_USERNAME }}/sleep-disorder-model:${{ github.sha }}
+
+      - name: Push Docker Image
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/sleep-disorder-model:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/sleep-disorder-model:${{ github.sha }}
